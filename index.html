@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaMatch: Reconciling Metadata for Aggregating Music Difficulty Annotations</title>
+  <meta name="description" content="Lorem ipsum dolor sit amet, consectetur adipiscing elit.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/all.min.css" integrity="sha512-QeR2VH+lsBE5LSAe1Q5EnTBbe7XTBubt8dG93Y7gidSgdMCr8nVqKcfKAMyN96SV8KDbZVTDXChatu5G2KQGzg==" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #1f2328;
+      --muted: #59636e;
+      --pill-bg: #1f2328;
+      --pill-text: #ffffff;
+      --pill-hover: #424a53;
+      --max-width: 860px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Source Sans 3", system-ui, -apple-system, sans-serif;
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    main {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 48px 16px 64px;
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      line-height: 1.2;
+      text-align: center;
+      margin: 0 0 24px;
+    }
+
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: 999px;
+      background: var(--pill-bg);
+      color: var(--pill-text);
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.15s ease;
+    }
+
+    .pill:hover { background: var(--pill-hover); }
+
+    .pill.disabled {
+      background: #d1d9e0;
+      color: var(--muted);
+      cursor: not-allowed;
+    }
+
+    .pill i {
+      font-size: 1.05em;
+    }
+
+    .thumbnail {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      text-align: center;
+      margin: 0 0 12px;
+    }
+
+    .abstract p {
+      text-align: justify;
+      margin: 0;
+    }
+
+    .citation {
+      margin-top: 40px;
+    }
+
+    .bibtex {
+      position: relative;
+    }
+
+    .bibtex pre {
+      margin: 0;
+      padding: 16px;
+      overflow-x: auto;
+      background: #f6f8fa;
+      border: 1px solid #d1d9e0;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 12px;
+      border: 1px solid #d1d9e0;
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .copy-btn:hover { background: #eef1f4; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>MetaMatch: Reconciling Metadata for Aggregating Music Difficulty Annotations</h1>
+
+    <nav class="links">
+      <a class="pill" href="deliverables/metamatch_paper.pdf">
+        <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+        Paper
+      </a>
+      <a class="pill" href="https://github.com/meganelisabethfinch/metamatch">
+        <i class="fa-brands fa-github" aria-hidden="true"></i>
+        Code
+      </a>
+      <span class="pill disabled" aria-disabled="true" title="Coming soon">
+        <i class="fa-solid fa-database" aria-hidden="true"></i>
+        Dataset
+      </span>
+      <a class="pill" href="deliverables/metamatch_poster_landscape.pdf">
+        <i class="fa-solid fa-image" aria-hidden="true"></i>
+        Poster
+      </a>
+    </nav>
+
+    <img class="thumbnail" src="assets/thumbnail.png" alt="MetaMatch overview diagram">
+
+    <section class="abstract">
+      <h2>Abstract</h2>
+      <p>
+        The inconsistency of metadata across sources is a persistent problem for large-scale music research. The variety of approaches to documenting even basic elements such as artists’ names and work titles makes it difficult to aggregate data across different sources. This paper presents a comparative analysis of approaches to this problem, combining the OpenRefine Reconciliation pipeline with LLM-based strategies for entity matching. We also explore one potential application of this pipeline in sheet music difficulty classification. By gathering difficulty labels from established music exam board syllabi and matching them to corresponding IMSLP entries, we link expert difficulty annotations to sheet music available through IMSLP for automatic sheet music difficulty classification. The resulting piano dataset consists of 7,737 repertoire-list entries, of which 2,389 are automatically matched to 1,210 distinct IMSLP work identifiers. Our method produces data that combine high-quality expert annotations with the scale more typically associated with crowd-sourced corpora, and can be extended to additional instruments. We release the matching pipeline, dataset, and code at <a href="https://meganelisabethfinch.github.io/metamatch">https://meganelisabethfinch.github.io/metamatch</a> to support further work on cross-corpus music analysis, both for this use case and for the many others which depend on robust metadata alignment at scale.
+      </p>
+    </section>
+
+    <section class="citation">
+      <h2>Citation</h2>
+      <div class="bibtex">
+        <button class="copy-btn" type="button">Copy</button>
+        <pre><code id="bibtex">@inproceedings{finch2026:metamatch,
+  author    = {Finch, Megan E. and Willcocks, Chris G. and Gotham, Mark R. H.},
+  title     = {{MetaMatch}: Reconciling Metadata for Aggregating Music Difficulty Annotations},
+  booktitle = {Proceedings of the 27th International Society for Music Information Retrieval Conference (ISMIR)},
+  address   = {Abu Dhabi, UAE},
+  year      = {2026}
+}</code></pre>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    document.querySelector(".copy-btn").addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      try {
+        await navigator.clipboard.writeText(document.getElementById("bibtex").textContent);
+        btn.textContent = "Copied!";
+      } catch {
+        btn.textContent = "Copy failed";
+      }
+      setTimeout(() => (btn.textContent = "Copy"), 2000);
+    });
+  </script>
+</body>
+</html>

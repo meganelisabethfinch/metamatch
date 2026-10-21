@@ -1,6 +1,6 @@
 # MetaMatch: Reconciling Metadata for Aggregating Music Difficulty Annotations
 
-[Project page](https://meganelisabethfinch.github.io/metamatch) · [Paper](deliverables/metamatch_paper.pdf) · [Poster](deliverables/metamatch_poster_landscape.pdf)
+[Project page](https://meganelisabethfinch.github.io/metamatch) · [Paper](https://ismir2026program.ismir.net/poster_530.html#paper) · [Poster](https://ismir2026program.ismir.net/poster_530.html#poster)
 
 Code for the ISMIR 2026 paper *MetaMatch: Reconciling Metadata for Aggregating Music Difficulty Annotations*. 
 
@@ -17,3 +17,8 @@ Code for the ISMIR 2026 paper *MetaMatch: Reconciling Metadata for Aggregating M
   year      = {2026}
 }
 ```
+
+## To Do (October)
+
+- [ ] Upload code
+- [ ] Upload dataset

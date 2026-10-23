@@ -1,0 +1,8 @@
+The query piece A is given as labelled fields:
+  piece_title: the actual title of the piece
+  movement   : (optional) the specific movement or section [if any]
+  work       : (optional) the larger work A belongs to (a suite, cycle, set, opera/musical, collection)
+  book       : (optional) the exam album, anthology, or edition A was printed in
+This information is collected from noisy PDF parsing and OCR, so, while the information is generally complete, values may not be in the correct fields.
+For instance, the work title may be in the book field, or the movement in the piece_title. Therefore, the field labels are for guidance only.
+

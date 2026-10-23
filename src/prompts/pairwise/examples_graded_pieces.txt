@@ -1,0 +1,336 @@
+EXAMPLE 1 — piece_title matches the candidate exactly; work is context, not a different piece
+
+A:
+piece_title: Tonight
+work: West Side Story
+
+B: Tonight
+
+Answer: The same piece
+
+---
+
+EXAMPLE 2 — piece_title matches the candidate exactly; work is context, not a different piece
+
+A:
+piece_title: Tonight
+work: West Side Story
+
+B: West Side Story
+
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 3 — same piece despite an instrumentation suffix on the candidate
+
+A:
+piece_title: Berceuse
+
+B: Berceuse for cello and piano
+
+Answer: The same piece
+
+---
+
+EXAMPLE 4 — same piece despite being reprinted in a different exam album/compilation
+
+A:
+piece_title: Für Elise
+book: 100 Best-Loved Piano Classics
+
+B: Für Elise
+
+Answer: The same piece
+
+---
+
+EXAMPLE 5 — alternative title; named movement; different catalogue number
+
+A:
+piece_title: Suite in D minor, BWV 812
+
+B: French Suite No. 1 in D minor, BWV 812
+
+Answer: The same piece
+
+---
+
+EXAMPLE 6 — alternative title; named movement; different catalogue number
+
+A:
+piece_title: Suite in D minor, BWV 812
+
+B: Allemande, BWV 812
+
+Answer: B is a partial of A
+
+---
+
+EXAMPLE 7 — alternative title; named movement; different catalogue number
+
+A:
+piece_title: Suite in D minor, BWV 812
+
+B: Prelude and Fugue in C minor, BWV 847
+
+Answer: Distinct piece
+
+---
+
+EXAMPLE 8 — catalogue number range; book is irrelevant; no corroborating link
+
+A:
+piece_title: Aria, BWV 515/a
+book: Bach for the Young Player, ABRSM
+
+B: Notebook for Anna Magdalena Bach, BWV 508–518
+
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 9 — catalogue number range; book is irrelevant; no corroborating link
+
+A:
+piece_title: Aria, BWV 515/a
+book: Bach for the Young Player, ABRSM
+
+B: Aria in F (from Cantatas, BWV 208 and BWV 68)
+
+Answer: Distinct piece
+
+---
+
+EXAMPLE 10 — same key and genre but different opus/number → distinct; matching opus/number → same
+
+A:
+piece_title: Sonata in C major, Op. 1, No. 2
+
+B: Sonata in C major, Op. 17, No. 4
+
+Answer: Distinct piece
+
+---
+
+EXAMPLE 11 — same key and genre but different opus/number → distinct; matching opus/number → same
+
+A:
+piece_title: Sonata in C major, Op. 1, No. 2
+
+B: Sonata No. 2 in C, Op. 1
+
+Answer: The same piece
+
+---
+
+EXAMPLE 12 — minor title variant; movement designation; piece within opus set; generic title
+
+A:
+piece_title: Sonatina in G major, Op. 36, No. 2
+book: Piano Exam Pieces 2025–2026, ABRSM
+
+B: Sonatina in G, Op. 36 No. 2
+
+Answer: The same piece
+
+---
+
+EXAMPLE 13 — minor title variant; movement designation; piece within opus set; generic title
+
+A:
+piece_title: Sonatina in G major, Op. 36, No. 2
+book: Piano Exam Pieces 2025–2026, ABRSM
+
+B: Allegro from Sonatina in G, Op. 36 No. 2
+
+Answer: B is a partial of A
+
+---
+
+EXAMPLE 14 — minor title variant; movement designation; piece within opus set; generic title
+
+A:
+piece_title: Sonatina in G major, Op. 36, No. 2
+book: Piano Exam Pieces 2025–2026, ABRSM
+
+B: 3 Progressive Sonatinas, Op. 36
+
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 15 — minor title variant; movement designation; piece within opus set; generic title
+
+A:
+piece_title: Sonatina in G major, Op. 36, No. 2
+book: Piano Exam Pieces 2025–2026, ABRSM
+
+B: Sonatina
+
+Answer: Distinct piece
+
+---
+
+EXAMPLE 16 — a numbered piece shares its set's opus; unrelated title is distinct
+
+A:
+piece_title: Rain and the Rainbow (No. 8), Op. 65
+work: Music for Children, Op. 65
+
+B: Children's Music, op. 65
+
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 17 — titles share no meaning (across languages) → distinct
+
+A:
+piece_title: Fireflies
+
+B: 山の詩
+
+Answer: Distinct piece
+
+---
+
+EXAMPLE 18 — whole work vs a movement (either direction); sibling movements are distinct
+
+A:
+piece_title: Allemande and Gigue
+work: French Suite No. 3 in B minor, BWV 814
+
+B: French Suite No. 3 in B minor, BWV 814
+
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 19 — whole work vs a movement (either direction); sibling movements are distinct
+
+A:
+piece_title: Allemande and Gigue
+work: French Suite No. 3 in B minor, BWV 814
+
+B: French Suite No. 3 in B minor, BWV 814: I. Allemande
+
+Answer: B is a partial of A
+
+---
+
+EXAMPLE 20 — whole work vs a movement (either direction); sibling movements are distinct
+
+A:
+piece_title: Allemande and Gigue
+work: French Suite No. 3 in B minor, BWV 814
+
+B: French Suite No. 3 in B minor, BWV 814: V. Menuet
+
+Answer: Distinct piece
+
+---
+
+EXAMPLE 21 — movement field names a specific movement: same movement → same; whole work → A is a partial of B; a different movement → distinct
+
+A:
+piece_title: Petite Suite
+movement: En bateau
+
+B: Petite Suite: En bateau
+
+Answer: The same piece
+
+---
+
+EXAMPLE 22 — movement field names a specific movement: same movement → same; whole work → A is a partial of B; a different movement → distinct
+
+A:
+piece_title: Petite Suite
+movement: En bateau
+
+B: Petite Suite
+
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 23 — generic title with no corroborating evidence → distinct
+
+A:
+piece_title: Tarantella
+
+B: 25 Études mélodiques, Op. 45
+
+Answer: Distinct piece
+
+---
+
+EXAMPLE 24 — work field gives the parent; French and English titles -> partial
+
+A:
+piece_title: Promenade
+work: Pictures at an Exhibition
+
+B: Tableaux d'une exposition
+
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 25 — historical spelling variant; book is irrelevant -> same
+
+A:
+piece_title: The Duke of Gloucester's March
+book: Purcell: Selected Piano Music, ABRSM
+
+B: The Duke of Glocester's March
+
+Answer: The same piece
+
+---
+
+EXAMPLE 26 — whole suite vs one of its movements → the movement is a part of A
+
+A:
+piece_title: Peer Gynt Suite No. 1, Op. 46
+
+B: Peer Gynt Suite no. 1, op. 46: IV. In the Hall of the Mountain King
+
+Answer: B is a partial of A
+
+---
+
+EXAMPLE 27 — whole cycle vs a single numbered piece → the piece is a part of A
+
+A:
+piece_title: Carnival of the Animals
+
+B: Le carnaval des animaux: XIII. The Swan
+
+Answer: B is a partial of A
+
+---
+
+EXAMPLE 28 — whole ballet vs one of its numbers → the number is a part of A
+
+A:
+piece_title: The Nutcracker, Op. 71
+
+B: The Nutcracker, op. 71: Waltz of the Flowers
+
+Answer: B is a partial of A
+
+---
+
+EXAMPLE 29 — whole set vs one piece; the piece shares the set's catalogue → part of A
+
+A:
+piece_title: Album for the Young, Op. 68
+
+B: Album for the Young, op. 68: No. 10. The Happy Farmer
+
+Answer: B is a partial of A
+
+---
+

@@ -1,0 +1,410 @@
+You are an expert in classical music repertoire spanning all major periods and genres — Baroque, Classical, Romantic, 20th-century, and beyond — including piano, orchestral, chamber, vocal, early music, and contemporary works.
+
+Task: Given a query piece A and a candidate piece B, choose exactly one label that best describes their relationship:
+
+  The same piece      — A and B are the same musical composition. These two pieces may have titles with spelling variants, in different languages, alternative titles, and different print editions or books. The music must be the same; publication details do not matter.
+
+  A is a partial of B — A is a single movement, excerpt, section, or piece taken from the larger work or collection B. B is the complete (or more complete) parent composition. This is often the case if A has a movement or number designation (e.g. Allegro, 1st movt, No. 3), or a catalogue number that falls within B's catalogue range.
+
+  B is a partial of A — B is a single movement, excerpt, or section of A. A is the larger parent composition.
+
+  Distinct piece      — A and B are different compositions with no meaningful musical relationship.
+                        
+
+The query piece A is given as labelled fields:
+  piece_title: the actual title of the piece
+  movement   : (optional) the specific movement or section [if any]
+  work       : (optional) the larger work A belongs to (a suite, cycle, set, opera/musical, collection)
+  book       : (optional) the exam album, anthology, or edition A was printed in
+This information is collected from noisy PDF parsing and OCR, so, while the information is generally complete, values may not be in the correct fields.
+For instance, the work title may be in the book field, or the movement in the piece_title. Therefore, the field labels are for guidance only.
+
+The candidate piece B may also include an optional metadata suffix ``[type: ...]``, which is the MusicBrainz work type (e.g. ``song`` or ``musical``).
+This is intended to help distinguish between musicals/albums, and `title tracks` of the same name.
+
+You can assume that these two pieces come from the same composer.
+
+Rules:
+  • Catalogue numbers (BWV, Op., K., RV, HWV, D., Z., TWV, etc) are hard identifiers. If both pieces carry a catalogue number and those numbers differ, they are very likely "Distinct piece", even if they share a genre word such as Sonata, Aria, or Prelude.
+  • A given composer may have many works which are `Sonatas`, `Nocturnes`, or `Andante`. Therefore, generic titles and bare tempo/movement markings (Tarantella, Nocturne, Waltz, Minuet, Prelude, Étude, Allegro, Andante, Moderato) used by many composers are generally NOT sufficient on their own to predict "The same piece" OR a partial match. To predict "The same piece", an additional matching key, opus/catalogue number, subtitle, or parent-work title would be required. This does not apply to specific or creative titles (e.g. "The Swan"), which are generally sufficient to infer a match.
+"A is a partial of B" requires B to be the whole CONTAINING work (a suite, cycle, set, collection, or complete multi-movement work). If A is a movement and B is a DIFFERENT movement of the same work (e.g. they share a similar title but end in ": I. Allegro" and ": V. Menuet" respectively), then we should answer "Distinct piece".
+
+  • The book field may include the work (e.g. `6 Cello Sonatas, op. 20`) OR a print/edition/anthology name (e.g. an exam album or "Concert Repertoire"). the former is part of the composition's `identity`; the latter is NOT. In other words, if the book is an exam album or anthology, it may still be the same composition, just published in different editions. If A and B are the same composition, just printed in different books or editions, answer "The same piece".
+  • Titles of A and B may be given in different languages. If the two titles are translations of each other, or known variants of the same title, answer "The same piece". This also applies to slight variations in titles e.g. `Music for Children` vs `Children's Music` - these are probably the same thing / different translations of the same original title. If the titles are not translations or known variants, and share no meaningful words, answer "Distinct piece".
+  • "A is a partial of B" should be used whenever B is the CONTAINING work. A and B may carry the same catalogue number and titles, but not be the same composition. For example, if A is a single numbered piece within a collection, and B is that collection (carrying the same catalogue number), answer "A is a partial of B" - not "The same piece". For instance, when A is `Op. 3, No. 4` or `No. 4 from Op. 3` (or similar), and B is `Op. 3`, then "A is a partial of B" - not "The same piece" A single numbered piece within a collection shares the collection's catalogue number.
+
+Format your response as follows, using exactly two lines:
+  Reasoning: <one or two sentences explaining which features of the titles and catalogue numbers led to your decision>
+  Answer: <exactly one of: The same piece | A is a partial of B | B is a partial of A | Distinct piece>
+
+---
+
+EXAMPLE 1 — piece_title matches the candidate exactly; work is context, not a different piece
+
+A:
+piece_title: Tonight
+work: West Side Story
+
+B: Tonight
+
+Reasoning: The piece_title matches the candidate exactly; 'West Side Story' is the work (musical) the song comes from.
+Answer: The same piece
+
+---
+
+EXAMPLE 2 — piece_title matches the candidate exactly; work is context, not a different piece
+
+A:
+piece_title: Tonight
+work: West Side Story
+
+B: West Side Story
+
+Reasoning: The piece 'Tonight' is a song from the musical 'West Side Story'; it is part of that work, so A is part of B.
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 3 — same piece despite an instrumentation suffix on the candidate
+
+A:
+piece_title: Berceuse
+
+B: Berceuse for cello and piano
+
+Reasoning: These are the same piece, just with an instrumentation suffix on the candidate.
+Answer: The same piece
+
+---
+
+EXAMPLE 4 — same piece despite being reprinted in a different exam album/compilation
+
+A:
+piece_title: Für Elise
+book: 100 Best-Loved Piano Classics
+
+B: Für Elise
+
+Reasoning: These are the same piece or composition, just printed in different books/editions/anthologies.
+Answer: The same piece
+
+---
+
+EXAMPLE 5 — alternative title; named movement; different catalogue number
+
+A:
+piece_title: Suite in D minor, BWV 812
+
+B: French Suite No. 1 in D minor, BWV 812
+
+Reasoning: 'French Suite No. 1 in D minor' is an alternative title for BWV 812, sharing the same catalogue number - hence, it's the same composition.
+Answer: The same piece
+
+---
+
+EXAMPLE 6 — alternative title; named movement; different catalogue number
+
+A:
+piece_title: Suite in D minor, BWV 812
+
+B: Allemande, BWV 812
+
+Reasoning: The Allemande is a single dance or movement within BWV 812. Hence, BWV 812 `contains` the Allemande.
+Answer: B is a partial of A
+
+---
+
+EXAMPLE 7 — alternative title; named movement; different catalogue number
+
+A:
+piece_title: Suite in D minor, BWV 812
+
+B: Prelude and Fugue in C minor, BWV 847
+
+Reasoning: BWV 847 and BWV 812 are different catalogue numbers, so these are distinct compositions.
+Answer: Distinct piece
+
+---
+
+EXAMPLE 8 — catalogue number range; book is irrelevant; no corroborating link
+
+A:
+piece_title: Aria, BWV 515/a
+book: Bach for the Young Player, ABRSM
+
+B: Notebook for Anna Magdalena Bach, BWV 508–518
+
+Reasoning: BWV 515/a falls within the range BWV 508–518, so A is a single piece from the notebook collection; the book is an edition and does not affect the classification.
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 9 — catalogue number range; book is irrelevant; no corroborating link
+
+A:
+piece_title: Aria, BWV 515/a
+book: Bach for the Young Player, ABRSM
+
+B: Aria in F (from Cantatas, BWV 208 and BWV 68)
+
+Reasoning: Different catalogue numbers mean NOT the same composition, despite both being titled `Aria`.
+Answer: Distinct piece
+
+---
+
+EXAMPLE 10 — same key and genre but different opus/number → distinct; matching opus/number → same
+
+A:
+piece_title: Sonata in C major, Op. 1, No. 2
+
+B: Sonata in C major, Op. 17, No. 4
+
+Reasoning: Both are sonatas in C major, but Op. 1 No. 2 and Op. 17 No. 4 are different opus/catalogue numbers - hence these are not the same composition
+Answer: Distinct piece
+
+---
+
+EXAMPLE 11 — same key and genre but different opus/number → distinct; matching opus/number → same
+
+A:
+piece_title: Sonata in C major, Op. 1, No. 2
+
+B: Sonata No. 2 in C, Op. 1
+
+Reasoning: Same title and opus numbers, just reworded. Hence, these are the same composition.
+Answer: The same piece
+
+---
+
+EXAMPLE 12 — minor title variant; movement designation; piece within opus set; generic title
+
+A:
+piece_title: Sonatina in G major, Op. 36, No. 2
+book: Piano Exam Pieces 2025–2026, ABRSM
+
+B: Sonatina in G, Op. 36 No. 2
+
+Reasoning: Same title and opus numbers, just reworded - hence the same composition. The book is a print edition to ignore.
+Answer: The same piece
+
+---
+
+EXAMPLE 13 — minor title variant; movement designation; piece within opus set; generic title
+
+A:
+piece_title: Sonatina in G major, Op. 36, No. 2
+book: Piano Exam Pieces 2025–2026, ABRSM
+
+B: Allegro from Sonatina in G, Op. 36 No. 2
+
+Reasoning: `Op. 36 No. 2` (A, the work) contains `Allegro from Sonatina in G, Op. 36 No. 2` (B, the movement), i.e. B is a movement drawn from A.
+Answer: B is a partial of A
+
+---
+
+EXAMPLE 14 — minor title variant; movement designation; piece within opus set; generic title
+
+A:
+piece_title: Sonatina in G major, Op. 36, No. 2
+book: Piano Exam Pieces 2025–2026, ABRSM
+
+B: 3 Progressive Sonatinas, Op. 36
+
+Reasoning: Op. 36, No. 2 is the second sonatina within the '3 Progressive Sonatinas, Op. 36' set, making A one piece from that larger collection.
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 15 — minor title variant; movement designation; piece within opus set; generic title
+
+A:
+piece_title: Sonatina in G major, Op. 36, No. 2
+book: Piano Exam Pieces 2025–2026, ABRSM
+
+B: Sonatina
+
+Reasoning: 'Sonatina' is a generic genre name with no key, opus, or subtitle linking it to A. These MAY be the same work, but we don't have enough evidence to say for certain - hence treat these as different compositions.
+Answer: Distinct piece
+
+---
+
+EXAMPLE 16 — a numbered piece shares its set's opus; unrelated title is distinct
+
+A:
+piece_title: Rain and the Rainbow (No. 8), Op. 65
+work: Music for Children, Op. 65
+
+B: Children's Music, op. 65
+
+Reasoning: A is No. 8 of the work 'Music for Children, Op. 65'; the candidate is that whole set, sharing Op. 65 because A is one piece of it. Titles vary only very slightly (Children's Music vs Music for Children) - this can be treated as translation variant.
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 17 — titles share no meaning (across languages) → distinct
+
+A:
+piece_title: Fireflies
+
+B: 山の詩
+
+Reasoning: 'Fireflies' and '山の詩' (roughly 'Poem of the Mountain') share no meaningful words and are not translations of each other.
+Answer: Distinct piece
+
+---
+
+EXAMPLE 18 — whole work vs a movement (either direction); sibling movements are distinct
+
+A:
+piece_title: Allemande and Gigue
+work: French Suite No. 3 in B minor, BWV 814
+
+B: French Suite No. 3 in B minor, BWV 814
+
+Reasoning: The candidate is the complete French Suite No. 3, which is A's work; A ('Allemande and Gigue') is two of its movements, so A is a part of the whole suite.
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 19 — whole work vs a movement (either direction); sibling movements are distinct
+
+A:
+piece_title: Allemande and Gigue
+work: French Suite No. 3 in B minor, BWV 814
+
+B: French Suite No. 3 in B minor, BWV 814: I. Allemande
+
+Reasoning: The candidate is the Allemande, one of the two movements named in A, so the candidate is a part of A.
+Answer: B is a partial of A
+
+---
+
+EXAMPLE 20 — whole work vs a movement (either direction); sibling movements are distinct
+
+A:
+piece_title: Allemande and Gigue
+work: French Suite No. 3 in B minor, BWV 814
+
+B: French Suite No. 3 in B minor, BWV 814: V. Menuet
+
+Reasoning: The candidate is the Menuet — a different movement of the same suite, not one of A's two movements; neither contains the other.
+Answer: Distinct piece
+
+---
+
+EXAMPLE 21 — movement field names a specific movement: same movement → same; whole work → A is a partial of B; a different movement → distinct
+
+A:
+piece_title: Petite Suite
+movement: En bateau
+
+B: Petite Suite: En bateau
+
+Reasoning: A's movement field names the 'En bateau' movement of the Petite Suite, and the candidate is exactly that movement of the same work, so they are the same piece.
+Answer: The same piece
+
+---
+
+EXAMPLE 22 — movement field names a specific movement: same movement → same; whole work → A is a partial of B; a different movement → distinct
+
+A:
+piece_title: Petite Suite
+movement: En bateau
+
+B: Petite Suite
+
+Reasoning: The candidate is the complete Petite Suite; A is only its 'En bateau' movement, so A is a part of the whole work.
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 23 — generic title with no corroborating evidence → distinct
+
+A:
+piece_title: Tarantella
+
+B: 25 Études mélodiques, Op. 45
+
+Reasoning: 'Tarantella' is a generic genre name and there is no opus number or subtitle connecting A to the candidate. Not enough evidence to say these are the same.
+Answer: Distinct piece
+
+---
+
+EXAMPLE 24 — work field gives the parent; French and English titles -> partial
+
+A:
+piece_title: Promenade
+work: Pictures at an Exhibition
+
+B: Tableaux d'une exposition
+
+Reasoning: A's work is 'Pictures at an Exhibition', the English title of the candidate (Tableaux d'une exposition); Promenade is a single movement of that larger work.
+Answer: A is a partial of B
+
+---
+
+EXAMPLE 25 — historical spelling variant; book is irrelevant -> same
+
+A:
+piece_title: The Duke of Gloucester's March
+book: Purcell: Selected Piano Music, ABRSM
+
+B: The Duke of Glocester's March
+
+Reasoning: The titles differ only in the spelling of 'Gloucester/Glocester', a historical variant; the book is a print edition, not part of the composition title.
+Answer: The same piece
+
+---
+
+EXAMPLE 26 — whole suite vs one of its movements → the movement is a part of A
+
+A:
+piece_title: Peer Gynt Suite No. 1, Op. 46
+
+B: Peer Gynt Suite no. 1, op. 46: IV. In the Hall of the Mountain King
+
+Reasoning: A is the complete Peer Gynt Suite No. 1; the candidate is its fourth movement (sharing Op. 46 because it belongs to the suite), so B is a single movement drawn from A.
+Answer: B is a partial of A
+
+---
+
+EXAMPLE 27 — whole cycle vs a single numbered piece → the piece is a part of A
+
+A:
+piece_title: Carnival of the Animals
+
+B: Le carnaval des animaux: XIII. The Swan
+
+Reasoning: A is the whole suite 'Carnival of the Animals'; the candidate is one movement of it ('The Swan', No. 13, in the French title of the same work), so B is a part of A.
+Answer: B is a partial of A
+
+---
+
+EXAMPLE 28 — whole ballet vs one of its numbers → the number is a part of A
+
+A:
+piece_title: The Nutcracker, Op. 71
+
+B: The Nutcracker, op. 71: Waltz of the Flowers
+
+Reasoning: A is the complete Nutcracker; the candidate is a single number from it (sharing Op. 71), so B is contained in A.
+Answer: B is a partial of A
+
+---
+
+EXAMPLE 29 — whole set vs one piece; the piece shares the set's catalogue → part of A
+
+A:
+piece_title: Album for the Young, Op. 68
+
+B: Album for the Young, op. 68: No. 10. The Happy Farmer
+
+Reasoning: A is the complete Op. 68 album; the candidate is one numbered piece from it. They share Op. 68 because B is a piece of A, so B is a partial of A — not the same piece.
+Answer: B is a partial of A
+
+---
+
+A:
+{query}
+
+B: {targets}

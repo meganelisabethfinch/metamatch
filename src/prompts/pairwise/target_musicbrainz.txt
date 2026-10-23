@@ -1,0 +1,3 @@
+The candidate piece B may also include an optional metadata suffix ``[type: ...]``, which is the MusicBrainz work type (e.g. ``song`` or ``musical``).
+This is intended to help distinguish between musicals/albums, and `title tracks` of the same name.
+

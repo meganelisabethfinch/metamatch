@@ -1,0 +1,16 @@
+CATALOGUE_PATTERNS = [
+    (r'\bBWV\s*(Anh\.?\s*)?\s*(\d+[a-z]?)', 'BWV',
+     lambda m: f"BWV {'Anh. ' if m.group(1) else ''}{m.group(2)}"),
+    (r'\bOp\.?\s*(\d+)[,\s]*(?:No\.?\s*(\d+))?', 'Op.',
+     lambda m: f"Op. {m.group(1)}" + (f" No. {m.group(2)}" if m.group(2) else "")),
+    (r'\bWoO\s*(\d+)', 'WoO',   lambda m: f"WoO {m.group(1)}"),
+    (r'\bK[Vv]?\.?\s*(\d+[a-z]?)', 'K.', lambda m: f"K. {m.group(1)}"),
+    (r'\bHWV\s*(\d+)', 'HWV',   lambda m: f"HWV {m.group(1)}"),
+    (r'\bD\.?\s*(\d+)', 'D.',   lambda m: f"D. {m.group(1)}"),
+    (r'\bHob\.?\s*([IVX]+[:/]\d+)', 'Hob.', lambda m: f"Hob. {m.group(1)}"),
+    (r'\bRV\s*(\d+)', 'RV',     lambda m: f"RV {m.group(1)}"),
+    (r'\bS\.?\s*(\d{2,})', 'S.', lambda m: f"S. {m.group(1)}"),
+    (r'\bZ\.?\s*(\d+)', 'Z.',   lambda m: f"Z. {m.group(1)}"),
+    (r'\bTWV\s*([\d:]+)', 'TWV', lambda m: f"TWV {m.group(1)}"),
+    (r'\bRCT\s*(\d+)', 'RCT',   lambda m: f"RCT {m.group(1)}"),
+]

@@ -1,0 +1,33 @@
+You are an expert in classical music repertoire spanning all major periods and genres — Baroque, Classical, Romantic, 20th-century, and beyond — including piano, orchestral, chamber, vocal, early music, and contemporary works.
+
+Task: Given a query piece A and a candidate piece B, choose exactly one label that best describes their relationship:
+
+  The same piece      — A and B are the same musical composition. These two pieces may have titles with spelling variants, in different languages, alternative titles, and different print editions or books. The music must be the same; publication details do not matter.
+
+  A is a partial of B — A is a single movement, excerpt, section, or piece taken from the larger work or collection B. B is the complete (or more complete) parent composition. This is often the case if A has a movement or number designation (e.g. Allegro, 1st movt, No. 3), or a catalogue number that falls within B's catalogue range.
+
+  B is a partial of A — B is a single movement, excerpt, or section of A. A is the larger parent composition.
+
+  Distinct piece      — A and B are different compositions with no meaningful musical relationship.
+                        
+
+{query_fields}{target_fields}You can assume that these two pieces come from the same composer.
+
+Rules:
+  • Catalogue numbers (BWV, Op., K., RV, HWV, D., Z., TWV, WoO, etc) are hard identifiers within their own catalogue. If both pieces carry a number from the SAME catalogue and those numbers differ (e.g. WoO 79 and WoO 48), they are very likely "Distinct piece", even if they share a genre word such as Sonata, Aria, or Prelude. Numbers from DIFFERENT catalogues (e.g. WoO 79 and Op. 4) can belong to the same piece, so on their own they are not evidence either way.
+  • A given composer may have many works which are `Sonatas`, `Nocturnes`, or `Andante`. Therefore, generic titles and bare tempo/movement markings (Tarantella, Nocturne, Waltz, Minuet, Prelude, Étude, Allegro, Andante, Moderato) used by many composers are generally NOT sufficient on their own to predict "The same piece" OR a partial match. To predict "The same piece", an additional matching key, opus/catalogue number, subtitle, or parent-work title would be required. This does not apply to specific or creative titles (e.g. "The Swan"), which are generally sufficient to infer a match.
+"A is a partial of B" requires B to be the whole CONTAINING work (a suite, cycle, set, collection, or complete multi-movement work). If A is a movement and B is a DIFFERENT movement of the same work (e.g. they share a similar title but end in ": I. Allegro" and ": V. Menuet" respectively), then we should answer "Distinct piece".
+
+  • The book field may include the work (e.g. `6 Cello Sonatas, op. 20`) OR a print/edition/anthology name (e.g. an exam album or "Concert Repertoire"). the former is part of the composition's `identity`; the latter is NOT. In other words, if the book is an exam album or anthology, it may still be the same composition, just published in different editions. If A and B are the same composition, just printed in different books or editions, answer "The same piece".
+  • Titles of A and B may be given in different languages. If the two titles are translations of each other, or known variants of the same title, answer "The same piece". This also applies to slight variations in titles e.g. `Music for Children` vs `Children's Music` - these are probably the same thing / different translations of the same original title. If the titles are not translations or known variants, and share no meaningful words, answer "Distinct piece".
+  • "A is a partial of B" should be used whenever B is the CONTAINING work. A and B may carry the same catalogue number and titles, but not be the same composition. For example, if A is a single numbered piece within a collection, and B is that collection (carrying the same catalogue number), answer "A is a partial of B" - not "The same piece". For instance, when A is `Op. 3, No. 4` or `No. 4 from Op. 3` (or similar), and B is `Op. 3`, then "A is a partial of B" - not "The same piece" A single numbered piece within a collection shares the collection's catalogue number.
+  • Reply with ONLY the label, exactly as written above. No additional explanation.
+
+---
+
+{examples}A:
+{query}
+
+B: {targets}
+
+Answer:

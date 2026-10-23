@@ -1,0 +1,9 @@
+The query piece A is an IMSLP work, given as labelled fields:
+  piece_title: the title of the work, often with its catalogue number
+  catalogue  : (optional) IMSLP's own catalogue number for the work (e.g. ``ILB 175``): a different catalogue from Op., BWV, WoO, etc
+  key        : (optional) the key of the work
+  sections   : (optional) the movements or pieces the work contains, often numbered
+  year       : (optional) when the work was composed
+If ``sections`` lists several movements or pieces, A is the complete work: B may be one of them ("B is a partial of A").
+The worked examples below come from another source and also use other fields (movement, work, book); the same reasoning applies.
+

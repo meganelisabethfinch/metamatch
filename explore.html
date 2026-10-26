@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaMatch: Explore the Dataset</title>
+  <meta name="description" content="Explore the MetaMatch dataset of difficulty-labelled music works.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #1f2328;
+      --muted: #59636e;
+      --border: #d1d9e0;
+      /* each source's colour, as in assets/thumbnail.png: pale (the sets) and a richer shade (their works) */
+      --graded-pieces-pale: #ebebff;
+      --graded-pieces: #5b5bd0;
+      --musicbrainz-pale: #ffdbf4;
+      --musicbrainz: #c7409f;
+      --imslp-pale: #c3f2f9;
+      --imslp: #1f9fb3;
+      --difficulty-pale: #faf6ba;     /* other difficulty datasets (CIPI, PianoStreet, ...) */
+      --difficulty: #b8a31f;
+      --wikidata-pale: #c9c9c9;
+      --wikidata: #6e7781;
+      --corpora-pale: #d9ffd9;        /* other sheet music corpora (PDMX, ...) */
+      --corpora: #3fae3f;
+      --edge-width: 0.7;   /* the links between works, and their arrowheads */
+      --is: #1f2328;
+      --part-whole: #59636e;   /* IS_PART_OF (CONTAINS is drawn as IS_PART_OF, reversed) */
+      --internal: #959da5;     /* HAS_<column>: a reference within a dataset, e.g. a graded piece -> its composers */
+      --max-width: 860px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Source Sans 3", system-ui, -apple-system, sans-serif;
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    /* the back link and the title on one row, the title centred on the page */
+    main {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+    }
+
+    h1 {
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      line-height: 1.2;
+      text-align: center;
+      margin: 0;
+    }
+
+    .back {
+      justify-self: start;
+      color: var(--muted);
+    }
+
+    #explorer {
+      position: relative;
+      height: 75vh;
+      margin: 0 16px 48px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    #explorer svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+
+    #explorer svg:active { cursor: grabbing; }
+
+    #status {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+    }
+
+    .legend {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 14px;
+      padding: 4px 10px;
+      background: rgb(255 255 255 / 0.85);
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+
+    .legend[hidden] { display: none; }
+
+    .model {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      background: rgb(255 255 255 / 0.85);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .model[hidden] { display: none; }
+
+    /* as Bootstrap's .form-select-sm: white, a light border, rounded, its own chevron, a blue ring on focus */
+    .model select {
+      margin-left: 6px;
+      padding: 4px 30px 4px 10px;
+      font: inherit;
+      color: var(--text);
+      background: #fff url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") no-repeat right 10px center / 12px 10px;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    /* as Bootstrap's .btn-sm, outlined like the menu */
+    .model .dice {
+      padding: 4px 9px;
+      font-size: 0.95rem;
+      line-height: 1.2;
+      color: #343a40;
+      background: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+    }
+
+    .model .dice:hover { background: #f8f9fa; }
+
+    .model select:hover, .model .dice:hover { border-color: #adb5bd; }
+
+    .model select:focus, .model .dice:focus-visible {
+      outline: 0;
+      border-color: #86b7fe;
+      box-shadow: 0 0 0 0.2rem rgb(13 110 253 / 0.25);
+    }
+
+    .legend button {
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--text);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .legend button::before {
+      content: "";
+      display: inline-block;
+      width: 25px;
+      height: 2px;
+      margin-right: 6px;
+      vertical-align: middle;
+      background: var(--swatch);
+    }
+
+    /* the edges' dash patterns, as in .edge */
+    .legend button[data-relation="IS_PART_OF"]::before {
+      background: repeating-linear-gradient(90deg, var(--swatch) 0 4px, transparent 4px 7px);
+    }
+
+    .legend button.off {
+      color: var(--muted);
+      text-decoration: line-through;
+      opacity: 0.5;
+    }
+
+    .selection {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      max-width: min(420px, calc(100% - 16px));
+      padding: 6px 10px;
+      background: rgb(255 255 255 / 0.9);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+
+    .selection[hidden] { display: none; }
+
+    .selection table, .tooltip table { border-collapse: collapse; margin-top: 2px; }
+    .selection th, .tooltip th { padding: 0 10px 0 0; font-weight: 400; text-align: left; vertical-align: top; opacity: 0.7; }
+    .selection td, .tooltip td { padding: 0; }
+
+    .tooltip {
+      position: fixed;
+      pointer-events: none;
+      max-width: 360px;
+      padding: 6px 10px;
+      background: var(--text);
+      color: var(--bg);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      opacity: 0;
+      transition: opacity 0.1s;
+    }
+
+    .set-outline { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 6 5; }
+    .set-fill { stroke: none; transition: fill-opacity 0.25s; }
+    .set-label { fill: var(--text); font-weight: 600; text-anchor: middle; }
+    .set-count { fill: var(--muted); text-anchor: middle; }
+    .set-dataset { fill: var(--muted); text-anchor: middle; text-transform: uppercase; letter-spacing: 0.06em; }
+    .dataset-name { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7; }
+    .meta { cursor: pointer; }
+    .meta-layer.focus .meta:not(.near), .meta-layer.focus .overview-link:not(.near) { opacity: 0.25; }
+    .overview-edge { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 8 6; }
+    .overview-label { fill: var(--text); font-weight: 600; text-anchor: middle; paint-order: stroke; stroke: var(--bg); stroke-width: 4px; }
+
+    .edge, .arrow { stroke-width: var(--edge-width); }
+    .edge.IS_PART_OF { stroke-dasharray: 4 3; }
+    .edge.IS { stroke: var(--is); }
+    .edge.IS_PART_OF { stroke: var(--part-whole); }
+    .edge.internal { stroke: var(--internal); }
+    .edge.off { display: none; }
+    .arrow { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .arrow.IS_PART_OF { stroke: var(--part-whole); }
+    .arrow.internal { stroke: var(--internal); }
+    .node { stroke: none; cursor: pointer; }
+    .focus .node, .focus .edge { opacity: 0.12; }
+    .focus .node.near, .focus .edge.near { opacity: 1; }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="back" href="index.html">← Back to Homepage</a>
+    <h1>Explore the Dataset</h1>
+  </main>
+
+  <section id="explorer">
+    <div id="status">Loading…</div>
+    <div class="legend" hidden>
+    </div>
+    <div class="model" hidden>
+      <label>Matches from <select></select></label>
+      <button class="dice" type="button" aria-label="New random sample"><i class="fa-solid fa-dice"></i></button>
+    </div>
+    <div class="selection" hidden></div>
+  </section>
+  <div class="tooltip"></div>
+
+  <script>
+    // Served from the repo root (python -m http.server), so the datasets are read as they are
+    const WORKS = "datasets/graded_pieces/works.csv";
+    const EVAL = "datasets/eval/graded_pieces_eval.csv";   // the hand-labelled pieces: the sample is drawn from these
+    const LINKS = {
+      wikidata: "datasets/metamatch/graded_pieces.composer_credits__wikidata.entities.gp_composers_wd.csv",
+      artists: "datasets/metamatch/graded_pieces.composer_credits__musicbrainz.artists.gp_composers_mb.csv",
+      imslpToMb: "datasets/metamatch/imslp.works__musicbrainz.works.imslp_works_mb.qwen35-9b.csv",
+      imslpWikidata: "datasets/metamatch/imslp.composers__wikidata.entities.imslp_composers_wd.csv",
+      imslpArtists: "datasets/metamatch/imslp.composers__musicbrainz.artists.imslp_composers_mb.csv",
+    };
+    // the full size of the datasets only partly loaded here (null: not known). MusicBrainz: rows in its indexes
+    // (paths.yaml musicbrainz), from the 2026-04-22 dump; IMSLP: rows in datasets/imslp/works.csv
+    const TOTALS = {
+      "mb-works": 2720233,
+      "mb-artists": 2193791,
+      "imslp-works": 257350,
+      "imslp-composers": 29583,   // composer categories credited on a work (data/imslp.py IMSLPComposers)
+      "wd": null,
+    };
+    // the work matches, per model (chosen in the menu): the model's run over the whole dataset, if there is one
+    // ("<run>.imported-<model>.csv"), else its eval run ("<eval>/imported-<model>.csv": query_id, target_id, predicted)
+    const WORK_MATCHES = {
+      "mb-works": { run: "datasets/metamatch/graded_pieces.works__musicbrainz.works.gp_works_mb_tree",
+                    eval: "out/eval/llm/gp_works_mb" },
+      "imslp-works": { run: "datasets/metamatch/graded_pieces.works__imslp.works.gp_works_imslp",
+                       eval: "out/eval/llm/gp_works_imslp" },
+    };
+    const MODELS = ["claude-opus-4-8", "claude-haiku-4-5", "qwen35-9b", "qwen35-4b", "qwen25-7b", "vote-all", "vote-qwen"];
+    const GROUND_TRUTH = "ground truth";   // the hand labels in EVAL, in place of a model's
+    // the hand labels, per target (as data/eval.py): the label column, the column of the works labelled, and how to
+    // read those (MBIDs; IMSLP work URLs, up to a "NOT", as page titles)
+    const TRUTH = {
+      "mb-works": ["mb_match_type", "mb_ground_truth", (text) => text.split(/[\s,|\[\]]+/).filter(Boolean)],
+      "imslp-works": ["imslp_match_type", "imslp_ground_truth", (text) =>
+        (text.split(/\bNOT\b/)[0].match(/https?:\/\/imslp\.org\/wiki\/[^\s\]]+/g) || []).map((url) =>
+          decodeURIComponent(url.replace(/,$/, "").split("/wiki/").pop()).replaceAll("_", " ").trim())],
+    };
+    const EVAL_LABELS = { exact: "IS", part_of: "IS_PART_OF", contains: "CONTAINS", no_match: null };
+    const POSITIVE = ["IS", "IS_PART_OF", "CONTAINS"];
+    const PART_WHOLE = ["IS_PART_OF", "CONTAINS"];   // drawn as arrows from the part to the whole
+    // a reference within ONE dataset (never between two), named by pattern from the column it comes from, e.g. a
+    // graded piece's composer column: HAS_COMPOSER (later HAS_ARRANGER, HAS_GRADE, ...). Drawn as an arrow from the
+    // record to what it references
+    const internal = (column) => `HAS_${column.toUpperCase()}`;
+    const directed = (e) => e.internal || PART_WHOLE.includes(e.relation);
+    // what each dataset is called on the page; its views' names are capitalised, e.g. graded_pieces.works: dataset
+    // "Graded Pieces" (shown small, in capitals), view "Works"
+    const DATASET_NAMES = { graded_pieces: "Graded Pieces", wikidata: "Wikidata", musicbrainz: "MusicBrainz", imslp: "IMSLP" };
+    const displayName = (label) => {
+      const [dataset, view] = label.split(".");
+      return { dataset: DATASET_NAMES[dataset], view: `${view[0].toUpperCase()}${view.slice(1)}` };
+    };
+    const N = 15;             // graded pieces shown
+    const SEED = 1;           // the same sample on every load (until the dice are clicked)
+    const NODE_RADIUS = 4;
+    const LINE_HEIGHT = 1.15;   // of the sets' wrapped labels, in ems
+    const GAP = 160;          // between the columns of sets
+    // where each set goes, in columns and rows, as in assets/thumbnail.png: graded pieces on the left, Wikidata and
+    // MusicBrainz in the middle, IMSLP on the right (a row below the works, so the graded pieces' links to it pass
+    // under musicbrainz.works rather than through it)
+    const LAYOUT = {
+      "gp-credits": [0, 0.5], "gp-works": [0, 2],
+      "wd": [1, 0], "mb-artists": [1, 1], "mb-works": [1, 2],
+      "imslp-composers": [2, 0.5], "imslp-works": [2, 3],
+    };
+
+    const explorer = document.getElementById("explorer");
+    const tooltip = document.querySelector(".tooltip");
+    const panel = document.querySelector(".selection");   // the clicked work or dataset
+
+    function optional(url) {
+      // a file that may not be there (datasets/ isn't committed): its rows, or null
+      return parse(url).catch(() => { console.warn(`not loaded: ${url}`); return null; });
+    }
+
+    function parse(url, options = {}) {
+      return new Promise((resolve, reject) => Papa.parse(url, {
+        download: true, header: true, skipEmptyLines: true, ...options,
+        complete: (r) => resolve(r.data), error: reject,
+      }));
+    }
+
+    // a piece's row in the works: the first of the rows with its piece_id (as the eval runs' query_id); filled from
+    // the works, else from the eval runs loaded
+    const rowOf = new Map();
+
+    async function loadFiles() {
+      // any file may be missing: then whatever it alone provides is left out, and the rest is shown (the links hold
+      // both ends' ids, so a node needs no more than one link file to be shown)
+      const [rows, evalRows, ...links] = await Promise.all([WORKS, EVAL, ...Object.values(LINKS)].map(optional));
+      for (const w of rows || []) if (!rowOf.has(w.piece_id)) rowOf.set(w.piece_id, w.id);
+      return { rows, evalRows, links: Object.fromEntries(Object.keys(LINKS).map((key, i) => [key, links[i] || []])),
+               any: !!(rows || evalRows || links.some(Boolean)) };
+    }
+
+    const matchCache = new Map();
+    function workMatches(model, files) {
+      // the work matches shown for model (or GROUND_TRUTH), per target set: [{source_id: row id, target_id, relation}]
+      if (!matchCache.has(model)) matchCache.set(model, model === GROUND_TRUTH ? Promise.resolve(truth(files))
+        : Promise.all(Object.values(WORK_MATCHES).map(async ({ run, eval: evalRun }) => {
+            const full = await parse(`${run}.imported-${model}.csv`).catch(() => null);   // usually not there
+            if (full) return full;
+            const rows = await optional(`${evalRun}/imported-${model}.csv`) || [];
+            for (const r of rows) if (!rowOf.has(r.key)) rowOf.set(r.key, r.query_id);
+            return rows.map((r) => ({ source_id: r.query_id, target_id: r.target_id, relation: r.predicted }));
+          })).then((lists) => Object.fromEntries(Object.keys(WORK_MATCHES).map((set, i) => [set, lists[i]]))));
+      return matchCache.get(model);
+    }
+
+    function truth({ evalRows }) {
+      // the hand labels as matches; several labels for several works ("exact|contains") are paired in order,
+      // otherwise the first label is every work's. Unknown labels are left out
+      return Object.fromEntries(Object.entries(TRUTH).map(([set, [labelColumn, idColumn, ids]]) =>
+        [set, (evalRows || []).flatMap((r) => {
+          const labels = r[labelColumn].split("|").map((l) => l.trim()).filter(Boolean);
+          if (!labels.length || labels.some((l) => !(l in EVAL_LABELS))) return [];
+          const targets = ids(r[idColumn]), paired = labels.length === targets.length && targets.length > 1;
+          return targets.map((target_id, i) => ({ source_id: rowOf.get(r.piece_id) ?? r.piece_id, target_id,
+            relation: EVAL_LABELS[labels[paired ? i : 0]] }));
+        })]));
+    }
+
+    function build({ rows, evalRows, links }, workMatches) {
+      // the sample and everything linked to it, as sets of nodes and the edges between them
+      const { wikidata: wikidataLinks, artists: artistLinks, imslpToMb: imslpToMbLinks,
+              imslpWikidata: imslpWikidataLinks, imslpArtists: imslpArtistLinks } = links;
+      const works = rows && new Map(rows.map((w) => [w.id, w]));
+      const evalPieces = new Map((evalRows || []).map((r) => [rowOf.get(r.piece_id) ?? r.piece_id, r]));
+      const isPiano = (id) => !works || works.get(id)?.instrument === "piano";
+
+      // a piece's composer credits (as graded_pieces._credit_ids): "<row id>/<position>", one per person named; without
+      // the works, those the composer links name
+      const creditsOf = d3.group([...wikidataLinks, ...artistLinks].map((l) => l.source_id), (c) => c.split("/")[0]);
+
+      // the sample: hand-labelled pieces (or, without those, the first of: pieces the model matched, pieces with a
+      // composer match, any piano pieces), the same whichever model is shown; then everything they're linked to: the
+      // MusicBrainz and IMSLP works matched, the composers of both, and the Wikidata entities and MusicBrainz artists
+      // those match
+      const matchedIds = Object.values(workMatches).flat().map((l) => l.source_id);
+      const eligible = [[...evalPieces.keys()], matchedIds, [...creditsOf.keys()].filter(isPiano),
+        rows ? [...works.keys()].filter(isPiano) : []].find((ids) => ids.length) || [];
+      const sample = d3.shuffler(d3.randomLcg(seed))([...new Set(eligible)].sort(d3.ascending)).slice(0, N);
+      const sampled = new Set(sample);
+      const nodes = new Map(), edges = [];
+      // fields: shown in the node's details, named as the dataset's columns (id: the key, unless given).
+      // url: opened on double click
+      const add = (set, id, fields, url) => {
+        const key = `${set}|${id}`;
+        if (!nodes.has(key)) nodes.set(key, { id: key, set, fields: { id, ...fields }, url });
+        return key;
+      };
+      const credits = new Set();
+      for (const id of sample) {
+        const w = works?.get(id) || evalPieces.get(id);
+        add("gp-works", id, w ? { piece_title: w.piece_title, composer: w.composer } : {});
+        const parts = works?.get(id) ? JSON.parse(w.composer_parts || "[]").map((part, i) => [`${id}/${i}`, part])
+          .filter(([, part]) => part.entity_type === "person" && part.substring.trim())
+          : [...new Set(creditsOf.get(id))].map((credit) => [credit, null]);
+        for (const [creditId, part] of parts) {
+          credits.add(creditId);
+          const credit = add("gp-credits", creditId, part ? { original: part.substring } : {});
+          edges.push({ source: `gp-works|${id}`, target: credit, relation: internal("composer"), internal: true });
+        }
+      }
+      const wikidataUrl = (id) => `https://www.wikidata.org/wiki/${id}`;
+      const artistUrl = (id) => `https://musicbrainz.org/artist/${id}`;
+      const imslpUrl = (title) => `https://imslp.org/wiki/${encodeURIComponent(title.replaceAll(" ", "_"))}`;
+      const matches = (links, sourceSet, sources, targetSet, url) => {
+        // the links from the sources (ids in sourceSet) to targetSet, adding the targets
+        for (const l of links) {
+          if (!sources.has(l.source_id) || !POSITIVE.includes(l.relation)) continue;
+          const target = add(targetSet, l.target_id, {}, url(l.target_id));
+          edges.push({ source: `${sourceSet}|${l.source_id}`, target, relation: l.relation });
+        }
+      };
+      matches(wikidataLinks, "gp-credits", credits, "wd", wikidataUrl);
+      matches(artistLinks, "gp-credits", credits, "mb-artists", artistUrl);
+      for (const l of workMatches["mb-works"]) {
+        if (!sampled.has(l.source_id) || !POSITIVE.includes(l.relation)) continue;
+        const mb = add("mb-works", l.target_id, {}, `https://musicbrainz.org/work/${l.target_id}`);
+        edges.push({ source: `gp-works|${l.source_id}`, target: mb, relation: l.relation });
+      }
+      for (const l of workMatches["imslp-works"]) {
+        if (!sampled.has(l.source_id) || !POSITIVE.includes(l.relation)) continue;
+        // the page title is "<worktitle> (<composer>)", e.g. "Das kleine Konzert (Gurlitt, Cornelius)": the work's
+        // worktitle and composer fields, without loading all of datasets/imslp/works.csv
+        const [, worktitle, composer] = l.target_id.match(/^(.*?)\s*\(([^()]*)\)$/) || [, l.target_id, ""];
+        const imslp = add("imslp-works", l.target_id, { worktitle, composer }, imslpUrl(l.target_id));
+        edges.push({ source: `gp-works|${l.source_id}`, target: imslp, relation: l.relation });
+      }
+      // the IMSLP works' composers, keyed by name (as in the links); their id is the category
+      const imslpComposers = new Set();
+      for (const work of [...nodes.values()].filter((n) => n.set === "imslp-works")) {
+        const name = work.fields.composer;
+        if (!name) continue;
+        imslpComposers.add(name);
+        const composer = add("imslp-composers", name, { id: `Category:${name}`, name }, imslpUrl(`Category:${name}`));
+        edges.push({ source: work.id, target: composer, relation: internal("composer"), internal: true });
+      }
+      matches(imslpWikidataLinks, "imslp-composers", imslpComposers, "wd", wikidataUrl);
+      matches(imslpArtistLinks, "imslp-composers", imslpComposers, "mb-artists", artistUrl);
+      // IMSLP -> MusicBrainz, where both works are already shown
+      for (const l of imslpToMbLinks) {
+        const source = `imslp-works|${l.source_id}`, target = `mb-works|${l.target_id}`;
+        if (nodes.has(source) && nodes.has(target) && POSITIVE.includes(l.relation)) {
+          edges.push({ source, target, relation: l.relation });
+        }
+      }
+
+      // total: how many records the whole dataset has (the graded pieces' counted here, if loaded; the others' in
+      // TOTALS)
+      const allCredits = rows && d3.sum(rows, (w) => JSON.parse(w.composer_parts || "[]")
+        .filter((part) => part.entity_type === "person" && part.substring.trim()).length);
+      const all = [...nodes.values()];
+      const sets = [
+        { key: "gp-works", colour: "graded-pieces", label: "graded_pieces.works", total: rows?.length },
+        { key: "gp-credits", colour: "graded-pieces", label: "graded_pieces.composers", total: allCredits },
+        { key: "wd", colour: "wikidata", label: "wikidata.entities", total: TOTALS.wd },
+        { key: "mb-artists", colour: "musicbrainz", label: "musicbrainz.artists", total: TOTALS["mb-artists"] },
+        { key: "mb-works", colour: "musicbrainz", label: "musicbrainz.works", total: TOTALS["mb-works"] },
+        { key: "imslp-works", colour: "imslp", label: "imslp.works", total: TOTALS["imslp-works"] },
+        { key: "imslp-composers", colour: "imslp", label: "imslp.composers", total: TOTALS["imslp-composers"] },
+      ];
+      for (const set of sets) {
+        set.nodes = all.filter((n) => n.set === set.key);   // none: the set is left out
+        set.name = displayName(set.label);
+        set.count = recordsShown(set.nodes.length, set.total);
+        for (const n of set.nodes) n.name = set.name;
+      }
+      return { sets: sets.filter((set) => set.nodes.length), nodes: all, edges };
+    }
+
+    const hidden = new Set();   // relations toggled off in the legend
+    let seed = SEED;            // the sample's
+    let view = null;            // the zoom, kept when the graph is redrawn (another model chosen)
+
+    function draw({ sets, nodes, edges }) {
+      // each set in its own dashed circle, sized to its nodes, placed by LAYOUT; replaces the graph drawn before
+      d3.select(explorer).select("svg").remove();
+      panel.hidden = true;
+      tooltip.style.opacity = 0;
+      for (const s of sets) s.r = Math.sqrt(s.nodes.length) * 12 + 20;
+      const largest = Math.max(...sets.map((s) => s.r));
+      for (const s of sets) {
+        const [column, row] = LAYOUT[s.key];
+        s.cx = column * (2 * largest + GAP);
+        s.cy = row * (2 * largest + GAP / 3);
+      }
+      const setOf = Object.fromEntries(sets.map((s) => [s.key, s]));
+      // each work's spot, relative to its set's centre: evenly spread over the circle, on a sunflower spiral
+      const golden = Math.PI * (3 - Math.sqrt(5));
+      for (const s of sets) {
+        s.nodes.forEach((n, i) => {
+          const d = (s.r - NODE_RADIUS * 3) * Math.sqrt((i + 0.5) / s.nodes.length), a = i * golden;
+          n.dx = d * Math.cos(a);
+          n.dy = d * Math.sin(a);
+          n.x = s.cx + n.dx;
+          n.y = s.cy + n.dy;
+        });
+      }
+      const byId = new Map(nodes.map((n) => [n.id, n]));
+      for (const e of edges) {
+        e.source = byId.get(e.source);
+        e.target = byId.get(e.target);
+        // directed part -> whole: a CONTAINS b is drawn as b IS_PART_OF a. Internal: record -> what it references
+        [e.from, e.to] = e.relation === "CONTAINS" ? [e.target, e.source] : [e.source, e.target];
+        if (e.relation === "CONTAINS") e.relation = "IS_PART_OF";
+      }
+      // zoomed out, one dashed edge between each pair of linked sets
+      const metaEdges = d3.rollups(edges, (es) => es.length, (e) => e.source.set, (e) => e.target.set)
+        .flatMap(([a, targets]) => targets.map(([b, count]) => ({ source: setOf[a], target: setOf[b], count })));
+      let selected = null;        // a work or a set
+      let k = 1, t = 0;           // zoom scale; 0: overview ... 1: detail
+
+      const svg = d3.select(explorer).append("svg");
+      const defs = svg.append("defs");
+      // the relations shown, each with a legend entry: the matches, then the internal ones
+      const relations = [...POSITIVE.filter((r) => r !== "CONTAINS"),
+        ...new Set(edges.filter((e) => e.internal).map((e) => e.relation))];
+      const isInternal = (relation) => !POSITIVE.includes(relation);
+      for (const relation of relations.filter((r) => isInternal(r) || PART_WHOLE.includes(r))) {
+        // drawn in the graph's own units, so the arrowhead's line is exactly as wide as the edge's
+        defs.append("marker").attr("id", `arrow-${relation}`).attr("markerUnits", "userSpaceOnUse")
+          .attr("overflow", "visible").attr("orient", "auto")
+          .append("path").attr("class", `arrow ${relation}`).classed("internal", isInternal(relation))
+          .attr("d", "M-5,-3L0,0L-5,3");
+      }
+      d3.select(".legend").selectAll("button").data(relations).join("button").attr("type", "button")
+        .attr("data-relation", (r) => r).text((r) => r).classed("off", (r) => hidden.has(r))
+        .style("--swatch", (r) => `var(--${isInternal(r) ? "internal" : r === "IS" ? "is" : "part-whole"})`);
+      const world = svg.append("g");
+
+      // the sets, as nodes in their own right: hovered, clicked and dragged like the works
+      const metaLayer = world.append("g").attr("class", "meta-layer");
+      const overview = metaLayer.append("g");
+      const metaEdge = overview.selectAll("g").data(metaEdges).join("g").attr("class", "overview-link");
+      metaEdge.append("line").attr("class", "overview-edge");
+      metaEdge.append("text").attr("class", "overview-label").text((m) => `${m.count} edges`);
+      const setG = metaLayer.append("g").selectAll("g").data(sets).join("g").attr("class", "meta");
+      setG.append("circle").attr("class", "set-fill").attr("r", (s) => s.r).attr("fill", (s) => `var(--${s.colour}-pale)`);
+      setG.append("circle").attr("class", "set-outline").attr("r", (s) => s.r);
+      setG.append("text").attr("class", "set-dataset");   // their lines: placeSets
+      setG.append("text").attr("class", "set-label");
+      setG.append("text").attr("class", "set-count");
+      interactive(setG, d3.drag()
+        .on("start", (event, s) => { if (!event.active) metaSim.alphaTarget(0.2).restart(); s.fx = s.x; s.fy = s.y; })
+        .on("drag", (event, s) => { s.fx = event.x; s.fy = event.y; })
+        .on("end", (event, s) => { if (!event.active) metaSim.alphaTarget(0).alpha(0.7); s.fx = s.fy = null; }));
+
+      // the sets move like the works: a dragged one springs back to its spot and pushes the other out of its way;
+      // its works move with it
+      for (const s of sets) { s.x = s.homeX = s.cx; s.y = s.homeY = s.cy; }
+      const metaSim = d3.forceSimulation(sets)
+        .force("collide", d3.forceCollide((s) => s.r + 20))
+        .force("x", d3.forceX((s) => s.homeX).strength(0.2))
+        .force("y", d3.forceY((s) => s.homeY).strength(0.2))
+        .on("tick", () => {
+          for (const s of sets) {
+            const dx = s.x - s.cx, dy = s.y - s.cy;
+            if (!dx && !dy) continue;
+            for (const n of s.nodes) { n.x += dx; n.y += dy; }
+            s.cx = s.x;
+            s.cy = s.y;
+          }
+          placeSets();
+          sim.alpha(Math.max(sim.alpha(), 0.05)).restart();
+        });
+
+      // zoomed in: the works and their links
+      const detail = world.append("g");
+      const edge = detail.append("g").selectAll("line").data(edges).join("line")
+        .attr("class", (e) => `edge ${e.relation}`).classed("internal", (e) => !!e.internal)
+        .attr("marker-end", (e) => (directed(e) ? `url(#arrow-${e.relation})` : null));
+      const node = detail.append("g").selectAll("circle").data(nodes).join("circle")
+        .attr("class", (n) => `node ${n.set}`).attr("r", NODE_RADIUS)
+        .attr("fill", (n) => `var(--${setOf[n.set].colour})`);
+      interactive(node, d3.drag()
+        .on("start", (event, n) => { if (!event.active) sim.alphaTarget(0.2).restart(); n.fx = n.x; n.fy = n.y; })
+        .on("drag", (event, n) => { n.fx = event.x; n.fy = event.y; })
+        .on("end", (event, n) => { if (!event.active) sim.alphaTarget(0).alpha(0.7); n.fx = n.fy = null; }));
+      svg.on("click", () => select(null));
+
+      // the works stay at their spots (a dragged one springs back, and they follow a dragged set); links don't pull
+      // them together
+      const sim = d3.forceSimulation(nodes)
+        .force("collide", d3.forceCollide(NODE_RADIUS * 2))
+        .force("x", d3.forceX().strength(0.2))
+        .force("y", d3.forceY().strength(0.2))
+        .on("tick", () => {
+          for (const n of nodes) keepInside(n, setOf[n.set]);
+          edge.each(function (e) {
+            // a directed edge stops at the edge of the node it points to, so its arrowhead shows
+            const dx = e.to.x - e.from.x, dy = e.to.y - e.from.y, d = Math.hypot(dx, dy) || 1;
+            const cut = directed(e) ? NODE_RADIUS + 1 : 0;
+            this.setAttribute("x1", e.from.x);
+            this.setAttribute("y1", e.from.y);
+            this.setAttribute("x2", e.to.x - (dx * cut) / d);
+            this.setAttribute("y2", e.to.y - (dy * cut) / d);
+          });
+          node.attr("cx", (n) => n.x).attr("cy", (n) => n.y);
+        });
+
+      edge.classed("off", (e) => hidden.has(e.relation));
+      d3.selectAll(".legend button").on("click", function (event, relation) {
+        hidden.has(relation) ? hidden.delete(relation) : hidden.add(relation);
+        this.classList.toggle("off", hidden.has(relation));
+        edge.classed("off", (e) => hidden.has(e.relation));
+        highlight(selected);
+      });
+
+      // zooming crossfades the overview (sets as nodes) into the detail (works inside the sets)
+      const width = explorer.clientWidth, height = explorer.clientHeight;
+      const [left, right] = d3.extent(sets.flatMap((s) => [s.cx - s.r, s.cx + s.r]));
+      const [top, bottom] = d3.extent(sets.flatMap((s) => [s.cy - s.r, s.cy + s.r]));
+      const fit = Math.min(width / (right - left + 80), height / (bottom - top + 120));
+      const home = fit * 0.75;   // the starting view: the sets with room around them
+      const zoom = d3.zoom().scaleExtent([home * 0.3, home * 16]).on("zoom", ({ transform }) => {
+        world.attr("transform", transform);
+        view = transform;
+        k = transform.k;
+        t = Math.min(1, Math.max(0, (k / home - 1.03) / 0.3));
+        overview.attr("opacity", 1 - t);
+        detail.attr("opacity", t).attr("pointer-events", t > 0.5 ? null : "none");
+        setG.attr("pointer-events", t > 0.5 ? "none" : null);
+        // the sets' fill fades from the starting view over a few scroll steps (one step zooms about 1.2x)
+        setG.select(".set-fill").style("fill-opacity", Math.min(1, Math.max(0, 1 - (k / home - 1) / 0.7)));
+        placeSets();
+      });
+      svg.call(zoom).call(zoom.transform, view || d3.zoomIdentity
+        .translate(width / 2 - home * (left + right) / 2, height / 2 - home * (top + bottom) / 2).scale(home));
+
+      function placeSets() {
+        // the sets, their labels and the edges between them; text stays the same size on screen
+        const size = (px) => px / k;
+        setG.selectAll("circle").attr("cx", (s) => s.cx).attr("cy", (s) => s.cy);
+        // zoomed out, just the dataset over the view, inside the circle (the dataset wrapped to fit it); zoomed in,
+        // the dataset, the view and the count, one line each above it
+        setG.each(function (s) {
+          const g = d3.select(this);
+          const dataset = g.select(".set-dataset"), label = g.select(".set-label"), count = g.select(".set-count");
+          if (t >= 0.5) {
+            lines(dataset, s, [s.name.dataset], 11, -s.r * k - 46);
+            lines(label, s, [s.name.view], 14, -s.r * k - 28);
+            lines(count, s, [s.count], 14, -s.r * k - 10);
+            return;
+          }
+          // capitals are wider: wrapped as if bigger
+          const rows = wrap(s.name.dataset.split(/(?= )/), 12 * 1.3, 1.7 * s.r * k);
+          const height = rows.length * 12 * LINE_HEIGHT + 16 * LINE_HEIGHT;
+          lines(dataset, s, rows, 12, -height / 2 + 12 * 0.85);
+          lines(label, s, [s.name.view], 16, -height / 2 + rows.length * 12 * LINE_HEIGHT + 16 * 0.85);
+          lines(count, s, [], 12, 0);
+        });
+
+        function lines(text, s, rows, px, baseline) {
+          // rows of text, the first on baseline (screen px below the set's centre), px high
+          text.attr("font-size", size(px)).selectAll("tspan").data(rows).join("tspan")
+            .attr("x", s.cx).attr("y", (_, i) => s.cy + size(baseline + i * px * LINE_HEIGHT)).text((row) => row);
+        }
+        metaEdge.each(function (m) {
+          // from circle edge to circle edge
+          const dx = m.target.cx - m.source.cx, dy = m.target.cy - m.source.cy, d = Math.hypot(dx, dy) || 1;
+          const x1 = m.source.cx + (dx * m.source.r) / d, y1 = m.source.cy + (dy * m.source.r) / d;
+          const x2 = m.target.cx - (dx * m.target.r) / d, y2 = m.target.cy - (dy * m.target.r) / d;
+          d3.select(this).select("line").attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2);
+          d3.select(this).select("text").attr("x", (x1 + x2) / 2).attr("y", (y1 + y2) / 2 - size(8))
+            .attr("font-size", size(16));
+        });
+        sim.force("x").x((n) => setOf[n.set].cx + n.dx);
+        sim.force("y").y((n) => setOf[n.set].cy + n.dy);
+      }
+
+      function interactive(selection, drag) {
+        // hover: details and highlighting; click: keep them; drag: move
+        selection
+          .on("mouseenter", (event, x) => { highlight(x); showTooltip(x, event); })
+          .on("mousemove", (event) => place(event))
+          .on("mouseleave", () => { highlight(selected); tooltip.style.opacity = 0; })
+          .on("click", (event, x) => { event.stopPropagation(); select(x === selected ? null : x); })
+          .on("dblclick", (event, x) => {
+            // the record's page (MusicBrainz, Wikidata, IMSLP), if it has one; it stays selected
+            event.stopPropagation();
+            select(x);
+            if (x.url) window.open(x.url, "_blank", "noopener");
+          })
+          .call(drag);
+      }
+
+      function highlight(x) {
+        // x (an entity or a set) and everything connected to it, by any number of steps along the shown links, stay
+        // dark; everything else goes faint
+        const isSet = !!x && "nodes" in x;
+        detail.classed("focus", !!x && !isSet);
+        metaLayer.classed("focus", isSet);
+        if (!x) return;
+        if (isSet) {
+          const near = connected(x, metaEdges);
+          setG.classed("near", (s) => near.has(s));
+          metaEdge.classed("near", (m) => near.has(m.source));
+          return;
+        }
+        const near = connected(x, edges.filter((e) => !hidden.has(e.relation)));
+        node.classed("near", (m) => near.has(m));
+        edge.classed("near", (e) => !hidden.has(e.relation) && near.has(e.source));
+      }
+
+      function connected(start, links) {
+        // start and everything reachable from it along links, in either direction
+        const neighbours = d3.group(links.flatMap((l) => [[l.source, l.target], [l.target, l.source]]), ([a]) => a);
+        const seen = new Set([start]), queue = [start];
+        while (queue.length) {
+          for (const [, next] of neighbours.get(queue.pop()) || []) {
+            if (!seen.has(next)) { seen.add(next); queue.push(next); }
+          }
+        }
+        return seen;
+      }
+
+      function select(x) {
+        selected = x;
+        highlight(x);
+        panel.hidden = !x;
+        if (x) panel.innerHTML = describe(x);
+      }
+    }
+
+    function recordsShown(shown, total) {
+      // every set's count, zoomed in and in its details; total unknown: just how many are shown
+      const of = total == null ? "" : ` of ${total.toLocaleString()}`;
+      return `${shown.toLocaleString()}${of} records shown`;
+    }
+
+    function wrap(tokens, px, width) {
+      // tokens joined into lines no wider than width (screen px; characters taken as 0.55em wide)
+      const rows = [];
+      for (const token of tokens) {
+        const last = rows.length - 1;
+        if (last >= 0 && (rows[last] + token).length * 0.55 * px <= width) rows[last] += token;
+        else rows.push(token);
+      }
+      return rows.map((row) => row.trim());
+    }
+
+    function keepInside(n, s) {
+      // pulls a node back inside its set's circle
+      const dx = n.x - s.cx, dy = n.y - s.cy, d = Math.hypot(dx, dy), max = s.r - NODE_RADIUS * 2;
+      if (d > max) { n.x = s.cx + (dx * max) / d; n.y = s.cy + (dy * max) / d; }
+    }
+
+    function showTooltip(n, event) {
+      tooltip.innerHTML = describe(n);
+      tooltip.style.opacity = 1;
+      place(event);
+    }
+
+    function describe(n) {
+      // a set: its name and count; an entity: its dataset, then a table of its fields (empty ones left out)
+      const heading = `<div class="dataset-name">${escape(n.name.dataset)}</div><strong>${escape(n.name.view)}</strong>`;
+      if ("nodes" in n) return `${heading}<br>${escape(n.count)}`;
+      const rows = Object.entries(n.fields).filter(([, v]) => v)
+        .map(([k, v]) => `<tr><th>${escape(k)}</th><td>${escape(v)}</td></tr>`).join("");
+      return `${heading}<table>${rows}</table>`;
+    }
+
+    function escape(s) {
+      return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    }
+
+    function place(event) {
+      tooltip.style.left = `${Math.min(event.clientX + 14, window.innerWidth - tooltip.offsetWidth - 8)}px`;
+      tooltip.style.top = `${event.clientY + 14}px`;
+    }
+
+    loadFiles().then(async (files) => {
+      if (!files.any) { document.getElementById("status").textContent = "No data available."; return; }
+      // the menu: whose work matches are shown
+      const menu = document.querySelector(".model select");
+      for (const model of [...MODELS, GROUND_TRUTH]) menu.add(new Option(model, model));
+      const redraw = async () => draw(build(files, await workMatches(menu.value, files)));
+      menu.addEventListener("change", redraw);
+      // the dice: another sample of N pieces, for the model shown
+      const dice = document.querySelector(".dice");
+      dice.addEventListener("click", () => { seed = Math.random(); redraw(); });
+      dice.addEventListener("mouseenter", (event) => {
+        tooltip.textContent = "New random sample";
+        tooltip.style.opacity = 1;
+        place(event);
+      });
+      dice.addEventListener("mousemove", place);
+      dice.addEventListener("mouseleave", () => { tooltip.style.opacity = 0; });
+      await redraw();
+      document.getElementById("status").remove();
+      document.querySelector(".legend").hidden = false;
+      document.querySelector(".model").hidden = false;
+    }).catch((e) => {
+      document.getElementById("status").textContent = `Couldn't load the data (${e.message || e}).`;
+    });
+  </script>
+</body>
+</html>

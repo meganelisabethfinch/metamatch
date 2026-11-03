@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 from collections import defaultdict
 
@@ -21,6 +22,10 @@ logger = logging.getLogger(__name__)
 SPARQL_ENDPOINT = "https://query.wikidata.org/sparql"
 USER_AGENT = "MetaMatch/0.1 (https://github.com/meganelisabethfinch/metamatch)"
 
+# The version of the record a fetch builds: bump it when the queries change, and records saved by an older version
+# are fetched again as they're needed. 2: name labels in "mul" too (Wikidata moved many names' labels there)
+VERSION = "2"
+
 _PERSON_QUERY = """
 SELECT ?item ?occ ?instr ?is_musician WHERE {
   VALUES ?item { %(items)s }
@@ -31,19 +36,26 @@ SELECT ?item ?occ ?instr ?is_musician WHERE {
 _GIVEN_NAMES_QUERY = """
 SELECT ?item ?name ?ordinal WHERE {
   VALUES ?item { %(items)s }
-  ?item p:%(given)s ?st . ?st ps:%(given)s ?g . ?g rdfs:label ?name . FILTER(LANG(?name) = "en")
+  ?item p:%(given)s ?st . ?st ps:%(given)s ?g .
+  OPTIONAL { ?g rdfs:label ?en . FILTER(LANG(?en) = "en") }
+  OPTIONAL { ?g rdfs:label ?mul . FILTER(LANG(?mul) = "mul") }
+  BIND(COALESCE(?en, ?mul) AS ?name) FILTER(BOUND(?name))
   OPTIONAL { ?st pq:%(ordinal)s ?ordinal . }
 }"""
 _FAMILY_NAMES_QUERY = """
 SELECT ?item ?name WHERE {
   VALUES ?item { %(items)s }
-  ?item wdt:%(family)s ?f . ?f rdfs:label ?name . FILTER(LANG(?name) = "en")
+  ?item wdt:%(family)s ?f .
+  OPTIONAL { ?f rdfs:label ?en . FILTER(LANG(?en) = "en") }
+  OPTIONAL { ?f rdfs:label ?mul . FILTER(LANG(?mul) = "mul") }
+  BIND(COALESCE(?en, ?mul) AS ?name) FILTER(BOUND(?name))
 }"""
 _NAMES_QUERY = """
 SELECT ?item ?name ?kind WHERE {
   VALUES ?item { %(items)s }
   { ?item rdfs:label ?name . FILTER(LANG(?name) = "en") BIND("label" AS ?kind) }
-  UNION { ?item skos:altLabel ?name . FILTER(LANG(?name) = "en") BIND("alias" AS ?kind) }
+  UNION { ?item rdfs:label ?name . FILTER(LANG(?name) = "mul") BIND("mul label" AS ?kind) }
+  UNION { ?item skos:altLabel ?name . FILTER(LANG(?name) IN ("en", "mul")) BIND("alias" AS ?kind) }
   UNION { ?item wdt:%(pseudonym)s ?name . BIND("alias" AS ?kind) }
 }"""
 
@@ -53,7 +65,7 @@ class WikiData(Dataset):
     # verifiers check. fetch() queries Wikidata (SPARQL) for any QIDs not held yet, and saves them.
     name = "wikidata"
     json_columns = ("aliases", "given_names", "family_names", "occupations", "instruments", "has_music_occupation")
-    columns = ["id", "label", *json_columns]
+    columns = ["id", "label", "version", *json_columns]
 
     def __init__(self, df=None, id_column=None, path=None, batch_size=100, delay=1.0, retries=4):
         super().__init__(df if df is not None else pd.DataFrame(columns=self.columns), id_column, path)
@@ -63,11 +75,16 @@ class WikiData(Dataset):
 
     @classmethod
     def load(cls, path) -> WikiData:
-        # the cache at path, or an empty one that will be saved there
+        # the cache at path (without records an older VERSION saved), or an empty one that will be saved there
         try:
-            return cls.from_csv(path)
+            wd = cls.from_csv(path)
         except FileNotFoundError:
             return cls(path=str(path))
+        stale = wd.df["version"] != VERSION if "version" in wd.df else pd.Series(True, index=wd.df.index)
+        if stale.any():
+            logger.info(f"{path}: {stale.sum()} records from an older version, to be fetched again")
+            wd.df = wd.df[~stale]
+        return wd
 
     def _fetch_remote(self, ids):
         qids = [i for i in ids if i.startswith("Q")]
@@ -82,7 +99,7 @@ class WikiData(Dataset):
         values = dict(items=" ".join(f"wd:{q}" for q in qids), occ=P_OCCUPATION, instr=P_INSTRUMENT, sub=P_SUBCLASS_OF,
                       music=" ".join(f"wd:{q}" for q in sorted(MUSIC_OCCUPATION_QIDS)), given=P_GIVEN_NAME,
                       ordinal=P_SERIES_ORDINAL, family=P_FAMILY_NAME, pseudonym=P_PSEUDONYM)
-        records = {q: {"id": q, "label": "", "aliases": [], "given_names": [], "family_names": [], "occupations": [],
+        records = {q: {"id": q, "label": "", "version": VERSION, "aliases": [], "given_names": [], "family_names": [], "occupations": [],
                        "instruments": [], "has_music_occupation": False} for q in qids}
 
         for row in self._query(_PERSON_QUERY % values):
@@ -95,7 +112,7 @@ class WikiData(Dataset):
 
         given = defaultdict(dict)   # qid -> {name: ordinal}, so names come out in written order
         for row in self._query(_GIVEN_NAMES_QUERY % values):
-            given[_qid(row["item"])][row["name"]["value"]] = int(row.get("ordinal", {}).get("value", 99))
+            given[_qid(row["item"])][row["name"]["value"]] = _ordinal(row)
         for q, names in given.items():
             records[q]["given_names"] = sorted(names, key=names.get)
 
@@ -107,7 +124,7 @@ class WikiData(Dataset):
         for row in self._query(_NAMES_QUERY % values):
             r = records[_qid(row["item"])]
             name = row["name"]["value"]
-            if row["kind"]["value"] == "label":
+            if row["kind"]["value"] == "label" or (row["kind"]["value"] == "mul label" and not r["label"]):
                 r["label"] = name
             if name not in r["aliases"]:
                 r["aliases"].append(name)   # the label counts as an alias too
@@ -130,6 +147,12 @@ class WikiData(Dataset):
                 logger.warning(f"SPARQL request failed (attempt {attempt + 1}/{self.retries}): {describe(e)}")
                 time.sleep(10 * (attempt + 1))
         raise ServiceUnavailable(f"Wikidata SPARQL: still rate-limited ({self.retries} attempts)")
+
+
+def _ordinal(row):
+    # a series ordinal is free text (e.g. "2."): its leading number; none or unreadable sorts last
+    m = re.match(r"\s*(\d+)", row.get("ordinal", {}).get("value", ""))
+    return int(m[1]) if m else 99
 
 
 def _qid(binding):

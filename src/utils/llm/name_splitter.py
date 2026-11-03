@@ -7,7 +7,7 @@ from dataclasses import asdict
 
 from tqdm import tqdm
 
-from .name_split_parser import NameParts, NameSplitParser
+from .name_split_parser import NameParts, NameSplitParser, initials_as_initials, spelled_as_written
 from .parser import MalformedResponseError
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,8 @@ class NameSplitter():
             if key in PLACEHOLDER_NAMES:
                 result[n] = []
             elif key in self.cache:
-                result[n] = [NameParts(**p) for p in self.cache[key]]
+                # the checks apply to answers cached before them, too
+                result[n] = [spelled_as_written(initials_as_initials(NameParts(**p)), n) for p in self.cache[key]]
         return result
 
     def _save(self):

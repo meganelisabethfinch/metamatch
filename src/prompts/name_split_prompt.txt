@@ -31,8 +31,23 @@ Rules (read carefully):
     empty ([]). DO NOT guess or expand initials to full names. For example,
     "J. S. Bach" → given_names=[], given_initials=["J","S"]. Do NOT return
     given_names=["Johann","Sebastian"].
+  • NEVER change the spelling of a name: copy every family name and given name
+    letter for letter as it is written in the input, changing only its
+    capitalisation. Do not correct, translate or modernise spellings, even if
+    you know another spelling: "CHEDEVILLE" → family_name "Chedeville" (NOT
+    "Cheville"); "MOSCHELES, I." → family_name "Moscheles" (NOT "Moschelles").
   • Multiple people written together ("Gilbert & Sullivan", "Rodgers and
-    Hammerstein", "Lennon/McCartney") → one array element PER PERSON.
+    Hammerstein", "Lennon/McCartney", "JOHN, E. and RICE, T.") → one array
+    element PER PERSON. Each person keeps their OWN family name: "Trent &
+    Hatch" is two people, Trent and Hatch. Only when the part before the "&" /
+    "and" is just initials or given names, with no family name of its own,
+    do the people share the family name written after it (e.g. a family or
+    spouses: "K & D Blackwell", "R. & R. Sherman"). A word that could be a
+    family name is a family name: "Rosa & Child" is Rosa and Child, NOT two
+    people called Child.
+  • A list whose FIRST person is written "Surname, Given" and the others
+    "Given Surname" ("Porter, Cole, and Moss Hart"; "Herbert, Victor, and
+    Harry B. Smith") is one element per person: Cole Porter and Moss Hart.
   • Groups, bands, orchestras, choirs, ensembles ("The Beatles", "Kronos
     Quartet", "London Symphony Orchestra") → entity_type "group".
   • Trailing suffixes (Jr., Sr., II, III) belong to the family_name.
@@ -47,6 +62,9 @@ Rules (read carefully):
     A written-out first name (e.g. "Michael", "Irving", "Caia", "Svend") is a
     given_name, NOT an initial. Even short given names like "Kai" or "Ida" go
     into given_names, not given_initials.
+  • A single letter (with or without a full stop) is ALWAYS an initial, never a
+    given name: "VIVALDI, A." → given_names=[], given_initials=["A"]. Do NOT
+    return given_names=["A"].
   • Family-first cultures (Chinese, Japanese, Hungarian, Korean): interpret the
     first token as family_name only when the name is unambiguously in that
     order. When in doubt, treat the last token as family_name.
@@ -83,6 +101,9 @@ Output: [{"entity_type":"person","substring":"Aarons, Alfred E.","family_name":"
 Input: J. S. Bach
 Output: [{"entity_type":"person","substring":"J. S. Bach","family_name":"Bach","given_names":[],"given_initials":["J","S"]}]
 
+Input: VIVALDI, A.
+Output: [{"entity_type":"person","substring":"VIVALDI, A.","family_name":"Vivaldi","given_names":[],"given_initials":["A"]}]
+
 Input: cole, k.r.
 Output: [{"entity_type":"person","substring":"cole, k.r.","family_name":"Cole","given_names":[],"given_initials":["K","R"]}]
 
@@ -100,6 +121,21 @@ Output: [{"entity_type":"person","substring":"Gilbert","family_name":"Gilbert","
 
 Input: Rodgers and Hammerstein
 Output: [{"entity_type":"person","substring":"Rodgers","family_name":"Rodgers","given_names":[],"given_initials":[]},{"entity_type":"person","substring":"Hammerstein","family_name":"Hammerstein","given_names":[],"given_initials":[]}]
+
+Input: JOHN, E. and RICE, T.
+Output: [{"entity_type":"person","substring":"JOHN, E.","family_name":"John","given_names":[],"given_initials":["E"]},{"entity_type":"person","substring":"RICE, T.","family_name":"Rice","given_names":[],"given_initials":["T"]}]
+
+Input: K & D Blackwell
+Output: [{"entity_type":"person","substring":"K","family_name":"Blackwell","given_names":[],"given_initials":["K"]},{"entity_type":"person","substring":"D Blackwell","family_name":"Blackwell","given_names":[],"given_initials":["D"]}]
+
+Input: Trent & Hatch
+Output: [{"entity_type":"person","substring":"Trent","family_name":"Trent","given_names":[],"given_initials":[]},{"entity_type":"person","substring":"Hatch","family_name":"Hatch","given_names":[],"given_initials":[]}]
+
+Input: Porter, Cole, and Moss Hart
+Output: [{"entity_type":"person","substring":"Porter, Cole","family_name":"Porter","given_names":["Cole"],"given_initials":[]},{"entity_type":"person","substring":"Moss Hart","family_name":"Hart","given_names":["Moss"],"given_initials":[]}]
+
+Input: CHEDEVILLE
+Output: [{"entity_type":"person","substring":"CHEDEVILLE","family_name":"Chedeville","given_names":[],"given_initials":[]}]
 
 Input: Lennon/McCartney
 Output: [{"entity_type":"person","substring":"Lennon","family_name":"Lennon","given_names":[],"given_initials":[]},{"entity_type":"person","substring":"McCartney","family_name":"McCartney","given_names":[],"given_initials":[]}]

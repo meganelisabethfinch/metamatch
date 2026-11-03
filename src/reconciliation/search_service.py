@@ -42,7 +42,7 @@ class SearchService(ReconciliationService):
         # the candidates the search returned but the threshold rejected
         fetched = self.fetch_all([query], targets)[query.id] if fetched is None else fetched
         kept = {m.target.id for m in self.keep(query, fetched)}
-        return [Rejection(m.target.id, f"score below {self.threshold}", score=m.score)
+        return [Rejection(m.target.id, "score below threshold", score=m.score)
                 for m in fetched if m.target.id not in kept]
 
     def query_key(self, query: Entity, targets=None) -> str:
@@ -51,7 +51,7 @@ class SearchService(ReconciliationService):
                           sort_keys=True, ensure_ascii=False)
 
     def reasons(self) -> list[str]:
-        return [f"score below {self.threshold}"]
+        return ["score below threshold"]
 
     def __repr__(self) -> str:
         return f"Search({self.view}, threshold={self.threshold})"

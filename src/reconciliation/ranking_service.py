@@ -23,12 +23,12 @@ class RankingService(ReconciliationService):
         # the candidates ranked below the threshold, or below the top_k
         scored = self._score_all(query, targets or [])
         kept = {m.target.id for m in self._keep_best(scored)}
-        return [Rejection(m.target.id, f"score below {self.threshold}" if self.threshold is not None
+        return [Rejection(m.target.id, "score below threshold" if self.threshold is not None
                           and m.score < self.threshold else f"not in top {self.top_k}", score=m.score)
                 for m in scored if m.target.id not in kept]
 
     def reasons(self) -> list[str]:
-        below = [f"score below {self.threshold}"] if self.threshold is not None else []
+        below = ["score below threshold"] if self.threshold is not None else []
         return below + ([f"not in top {self.top_k}"] if self.top_k is not None else [])
 
     def _score_all(self, query: Entity, targets: list[Entity]) -> list[Match]:

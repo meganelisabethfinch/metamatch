@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+import string
+import unicodedata
+
 from unidecode import unidecode
 
 from constants.name_particles import FAMILY_AFFIXES, NAME_PARTICLES, PARTICLES
 
+_EDGE = string.punctuation + " "
+
 
 def norm_name(s: str) -> str:
-    # for whole-string comparison: no accents, lower case, single spaces
-    return " ".join(unidecode(s or "").lower().split())
+    # for whole-string comparison: no accents, lower case, single spaces, no punctuation at either end
+    # (e.g. "TCHAIKOVSKY." -> "tchaikovsky"). Stray accent marks are dropped first: unidecode spells some as letters
+    # (e.g. the caron in "Dvorˇák" as "V")
+    s = "".join(c for c in unicodedata.normalize("NFKD", s or "") if unicodedata.category(c) not in ("Mn", "Lm", "Sk"))
+    return " ".join(unidecode(s).lower().split()).strip(_EDGE)
 
 
 def norm_family_name(s: str) -> str:

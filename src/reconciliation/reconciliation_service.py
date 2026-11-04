@@ -34,7 +34,7 @@ class Entity:
 class Rejection:
     """Why one candidate a service tried for a query didn't match it."""
     target_id: str
-    reason: str                    # e.g. "score below 70", "failed MusicOccupation"
+    reason: str                    # e.g. "score below threshold", "failed MusicOccupation"
     progress: tuple = ()           # how far it got (e.g. (stage, check)): higher = further
     score: float | None = None     # its score when it was tried, if any
 

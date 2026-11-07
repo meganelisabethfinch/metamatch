@@ -1,3 +1,2 @@
-The candidate piece B is an IMSLP work: its title (which often includes its own catalogue number), optionally followed by an IMSLP catalogue number such as ``ILB 175`` or ``IAD 76``.
-The IMSLP catalogue number is IMSLP's own numbering of the composer's works: it is a different catalogue from Op., BWV, WoO, etc, so it can only conflict with another IMSLP number.
+The candidate piece B is an IMSLP work title, which often includes its own catalogue number (e.g. Op., BWV, K.).
 

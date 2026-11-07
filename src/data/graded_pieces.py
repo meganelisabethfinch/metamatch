@@ -41,9 +41,11 @@ def _credit_entity(id: str, records: list[dict]) -> Entity:
 
 
 def _work_descriptor(r: dict) -> str:
-    # the labelled layout of the pairwise match prompts; empty fields, and a work / book that repeats the title, left out
+    # the labelled layout of the pairwise match prompts, catalogue numbers folded into the title (e.g. "Aria, BWV 515/a");
+    # empty fields, and a work / book that repeats the title, left out
     title = r["piece_title"].strip()
-    lines = [f"piece_title: {title}"]
+    catalogue = ", ".join(dict.fromkeys(c["value"] for c in r["catalogue_numbers"] or [] if c.get("value")))
+    lines = [f"piece_title: {f'{title}, {catalogue}' if catalogue else title}"]
     if r["movement"].strip():
         lines.append(f"movement: {r['movement'].strip()}")
     for field in ("work", "book"):

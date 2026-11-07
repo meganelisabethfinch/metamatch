@@ -94,16 +94,14 @@ class IMSLPComposers(Dataset):
 
 
 def _work_entity(id: str, records: list[dict]) -> Entity:
-    # as linked-difficulty-data showed IMSLP works: the prompt text is "title, catalogue no."; the embedded text is
-    # "composer - title - catalogue no." (the composer written "Given Family", as its Wikidata label usually is)
+    # the text, for prompts and embedding alike, is the title alone (which usually holds its Op./BWV/... number):
+    # IMSLP's own catalogue no. (e.g. "IJB 946") reads to the LLM as a conflicting number and adds noise to the
+    # embedding, and the composer is the same for every candidate
     r = records[0]
-    title, catalogue = r["worktitle"].strip(), r["icatno"].strip()
-    text = f"{title}, {catalogue}" if catalogue else title
-    embed_text = " - ".join(p for p in (_given_family(r["composer"]), title, catalogue) if p)
     properties = {k: v for k, v in r.items() if k not in ("id", "worktitle", "categories") and v}
     composer = _composer_key(r["composer"])
-    return Entity(id, text, properties | {"composers": [composer] if composer else [], "embed_text": embed_text,
-                                          "query_text": _query_text(r)})
+    return Entity(id, r["worktitle"].strip(), properties | {"composers": [composer] if composer else [],
+                                                            "query_text": _query_text(r)})
 
 
 def _query_text(r: dict, max_sections: int = 500) -> str:
@@ -115,12 +113,6 @@ def _query_text(r: dict, max_sections: int = 500) -> str:
     fields = [("piece_title", r["worktitle"]), ("catalogue", r["icatno"]), ("key", r.get("info_Key", "")),
               ("sections", sections), ("year", r.get("info_Year/Date of Composition", ""))]
     return "\n".join(f"{name}: {value.strip()}" for name, value in fields if value.strip())
-
-
-def _given_family(name: str) -> str:
-    # "Bach, Johann Sebastian" -> "Johann Sebastian Bach"
-    family, _, given = name.partition(",")
-    return f"{given.strip()} {family.strip()}".strip()
 
 
 def _composer_entity(id: str, records: list[dict]) -> Entity:

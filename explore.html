@@ -400,19 +400,15 @@
               imslpWikidata: imslpWikidataLinks, imslpArtists: imslpArtistLinks } = links;
       const works = rows && new Map(rows.map((w) => [w.id, w]));
       const evalPieces = new Map((evalRows || []).map((r) => [rowOf.get(r.piece_id) ?? r.piece_id, r]));
-      const isPiano = (id) => !works || works.get(id)?.instrument === "piano";
 
       // a piece's composer credits (as graded_pieces._credit_ids): "<row id>/<position>", one per person named; without
       // the works, those the composer links name
       const creditsOf = d3.group([...wikidataLinks, ...artistLinks].map((l) => l.source_id), (c) => c.split("/")[0]);
 
-      // the sample: hand-labelled pieces (or, without those, the first of: pieces the model matched, pieces with a
-      // composer match, any piano pieces), the same whichever model is shown; then everything they're linked to: the
-      // MusicBrainz and IMSLP works matched, the composers of both, and the Wikidata entities and MusicBrainz artists
-      // those match
-      const matchedIds = Object.values(workMatches).flat().map((l) => l.source_id);
-      const eligible = [[...evalPieces.keys()], matchedIds, [...creditsOf.keys()].filter(isPiano),
-        rows ? [...works.keys()].filter(isPiano) : []].find((ids) => ids.length) || [];
+      // the sample: hand-labelled piano pieces (the only ones work-matched so far), the same whichever model is shown;
+      // then everything they're linked to: the MusicBrainz and IMSLP works matched, the composers of both, and the
+      // Wikidata entities and MusicBrainz artists those match
+      const eligible = [...evalPieces].filter(([, r]) => r.instrument === "piano").map(([id]) => id);
       const sample = d3.shuffler(d3.randomLcg(seed))([...new Set(eligible)].sort(d3.ascending)).slice(0, N);
       const sampled = new Set(sample);
       const nodes = new Map(), edges = [];

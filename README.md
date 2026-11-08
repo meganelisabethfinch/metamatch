@@ -17,8 +17,3 @@ Code for the ISMIR 2026 paper *MetaMatch: Reconciling Metadata for Aggregating M
   year      = {2026}
 }
 ```
-
-## To Do (October)
-
-- [ ] Upload code
-- [ ] Upload dataset

@@ -295,9 +295,9 @@
     // ("<run>.imported-<model>.csv"), else its eval run ("<eval>/imported-<model>.csv": query_id, target_id, predicted)
     const WORK_MATCHES = {
       "mb-works": { run: "datasets/metamatch/graded_pieces.works__musicbrainz.works.gp_works_mb_tree",
-                    eval: "out/eval/llm/gp_works_mb" },
+                    eval: "datasets/eval/llm/gp_works_mb" },
       "imslp-works": { run: "datasets/metamatch/graded_pieces.works__imslp.works.gp_works_imslp",
-                       eval: "out/eval/llm/gp_works_imslp" },
+                       eval: "datasets/eval/llm/gp_works_imslp" },
     };
     const MODELS = ["claude-opus-4-8", "claude-haiku-4-5", "qwen35-9b", "qwen35-4b", "qwen25-7b", "vote-all", "vote-qwen"];
     const GROUND_TRUTH = "ground truth";   // the hand labels in EVAL, in place of a model's
